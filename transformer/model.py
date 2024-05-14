@@ -71,9 +71,6 @@ class FeedForwardblock(nn.Module):
     
 
 
-class ResidualConnection(nn.Module):
-    def __init__() -> None:
-        super().__init__()
 
 class MultiheadAttentionBlock(nn.Module):
     def __init__(self, d_model:int, h:int, dropout:int):
@@ -127,3 +124,26 @@ class Residual_Connetion(nn.Module):
         
     def forward(self, x, sublayer):
         return x + self.dropout(sublayer(self.norm(x)))
+    
+class EncoderBlock(nn.Module):
+    def __init__(self, self_attention_block:MultiheadAttentionBlock , feed_forward_block:FeedForwardblock, dropout:float) -> None:
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.feed_forward_block = feed_forward_block
+        self.residual_connections=nn.ModuleList([Residual_Connetion(dropout) for _ in range(2)])
+
+    def forward(self, x , src_mask):
+        x = self.residual_connections[0](x, lambda x : self.self_attention_block(x,x,x , src_mask))
+        x = self.residual_connections[1](x,self.feed_forward_block)
+        return x
+    
+class Encoder(nn.Module):
+    def __init__(self, layers:nn.ModuleList)->None:
+        super().__init__()
+        self.layers = layers
+        self.norm = LayerNormalization()
+
+    def forward(self, x, src_mask):
+        for layer in self.layers:
+            x = layer(x , src_mask)
+        return self.norm(x)
