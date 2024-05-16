@@ -147,3 +147,62 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x , src_mask)
         return self.norm(x)
+    
+class DecoderBlock(nn.Module):
+    def __init__(self, self_attention_block:MultiheadAttentionBlock, cross_attention_block:MultiheadAttentionBlock, feed_forward_block:FeedForwardblock, dropout:float):
+        super().__init__()
+        self.self_attention_block = self_attention_block
+        self.cross_attenton_block = self.cross_attenton_block
+        self.feed_forward_block = self.feed_forward_block
+        self.residual_connections = nn.Module([Residual_Connetion(dropout) for _ in range(3)])
+    def forward(self,encoder_output,src_mask,tgt_mask):
+        x = self.residual_connections[0](x, lambda x:self.self_attention_block(x,x,x, src_mask))
+        x = self.cross_attenton_block[1](x, lambda x:self.cross_attenton_block(x, encoder_output, encoder_output, tgt_mask))
+        x = self.feed_forward_block[2](x, self.feed_forward_block())
+        return x
+
+class Decoder(nn.Module):
+    def __init__(self, layers:nn.ModuleList):
+        super().__init__()
+        self.layer = layers
+        self.norm = LayerNormalization()
+
+    def forward(self, x , decoder_output, src_mask, tgt_mask):
+        for layer in self.layers:
+            x = layer(x,decoder_output, src_mask, tgt_mask)
+        return self.norm(x)
+    
+class ProjectionLayer(nn.Module):
+    def __init__(self, d_model,vocab_size):
+        super().__init__()
+        self.proj = nn.Linear(d_model, vocab_size)
+    
+    def forward(self, x):
+         # (batch, seq_len, d_model) --> (batch, seq_len, vocab_size)
+        return self.proj(x)
+    
+
+class Transformer(nn.Module):
+    def __init__(self, encoder:Encoder, decoder:Decoder, src_embed : InputEmbedding, tgt_embed : InputEmbedding, src_pos : PositionalEncoding, tgt_pos : PositionalEncoding , projection_layer:ProjectionLayer):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.src_embed = src_embed
+        self.tgt_embed = tgt_embed
+        self.src_pos = src_pos
+        self.tgt_pos = tgt_pos
+        self.projection_layer = projection_layer
+
+    def encoder(self, src, src_mask):
+        src = self.src_embed(src)
+        src = self.src_pos(src)
+        return self.encoder(src)
+
+    def decoder(self, encoder_output, src_mask, tgt, tgt_mask):
+        tgt = self.tgt_embed(tgt)
+        tgt = self.tgt_pos(tgt)
+        return self.decoder(tgt, encoder_output)
+    
+    def project(self, x):
+        return self.projection_layer(x)
+        
