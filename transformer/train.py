@@ -14,7 +14,7 @@ from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
 from tokenizers.pre_tokenizers import Whitespace
 from config import get_config, get_weights_file_path
-
+from model import build_transformer
 
 def get_all_sentences(ds, lang):
     for item in ds:
@@ -41,7 +41,7 @@ def get_ds(config):
     tokenizer_tgt = get_or_build_tokenizer(config,ds_raw,config["lang_tgt"])
 
     # Keep 90% data for traning and 10% for validation
-    train_ds_size = int(0.9*len(ds_raw))
+    train_ds_size = int(0.9 * len(ds_raw))
     val_ds_size = len(ds_raw) - train_ds_size
     train_ds_raw, val_ds_raw = random_split(ds_raw , [train_ds_size, val_ds_size])
 
@@ -71,10 +71,12 @@ def get_model(config, vocab_src_len, vocab_tgt_len):
 
 def train_model(config):
     # Define the device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = "cuda" if torch.cuda.is_available() else "mps" if torch.has_mps or torch.backends.mps.is_available() else "cpu"
+    device = torch.device(device)
+    
     print(f'Using device {device}')
 
-    Path(config['model_folder']).mkdir(parents=True, exist_ok=True)
+    Path(f"{config['datasource']}_{config['model_folder']}").mkdir(parents=True, exist_ok=True)
 
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
     model = get_model(config, tokenizer_src.get_vocab_size(),tokenizer_tgt.get_vocab_size()).to(device)
@@ -86,12 +88,12 @@ def train_model(config):
 
     initial_epoch = 0
     global_step = 0
-    if config['preload']:
-        model_filename = get_weights_file_path(config, config['preload'])
-        state = torch.load(model_filename)
-        initial_epoch = state['epoch']
-        optimizer.load_state_dict(state('optimizer_state_dict'))
-        global_step = state['global_step']
+    # if config['preload']:
+    #     model_filename = get_weights_file_path(config, config['preload'])
+    #     state = torch.load(model_filename)
+    #     initial_epoch = state['epoch'] + 1
+    #     optimizer.load_state_dict(state['optimizer_state_dict'])
+    #     global_step = state['global_step']
 
     loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id('[PAD]'),label_smoothing=0.1).to(device)
 
