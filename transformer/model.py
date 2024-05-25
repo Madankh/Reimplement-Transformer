@@ -65,11 +65,11 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class LayerNormalization(nn.Module):
-    def __init__(self,features:int, eps:float = 10**-6)->None:
+    def __init__(self, eps:float = 10**-6)->None:
         super().__init__()
         self.eps = eps
-        self.alpha = nn.Parameter(torch.ones(features))
-        self.bias = nn.Parameter(torch.zeros(features))
+        self.alpha = nn.Parameter(torch.ones(1))
+        self.bias = nn.Parameter(torch.zeros(1))
     def forward(self, x):
         mean = x.mean(dim=-1, keepdim=True)
         std = x.std(dim=-1, keepdim=True)
@@ -133,7 +133,7 @@ class MultiheadAttentionBlock(nn.Module):
         return self.w_o(x)
     
 class Residual_Connetion(nn.Module):
-    def __init__(self,features, dropout:float)->None:
+    def __init__(self,features:int, dropout:float)->None:
         super().__init__()
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNormalization(features)
@@ -168,7 +168,7 @@ class Encoder(nn.Module):
         
     
 class DecoderBlock(nn.Module):
-    def __init__(self,features,self_attention_block:MultiheadAttentionBlock, cross_attention_block:MultiheadAttentionBlock, feed_forward_block:FeedForwardblock, dropout:float):
+    def __init__(self,features:int,self_attention_block:MultiheadAttentionBlock, cross_attention_block:MultiheadAttentionBlock, feed_forward_block:FeedForwardblock, dropout:float):
         super().__init__()
         self.self_attention_block = self_attention_block
         self.cross_attenton_block = cross_attention_block
@@ -177,12 +177,12 @@ class DecoderBlock(nn.Module):
 
     def forward(self, x , encoder_output , src_mask , tgt_mask):
         x = self.residual_connections[0](x, lambda x:self.self_attention_block(x,x,x, tgt_mask))
-        x = self.cross_attenton_block[1](x, lambda x:self.cross_attenton_block(x, encoder_output, encoder_output, src_mask))
-        x = self.feed_forward_block[2](x, self.feed_forward_block)
+        x = self.residual_connections[1](x, lambda x:self.cross_attenton_block(x, encoder_output, encoder_output, src_mask))
+        x = self.residual_connections[2](x, self.feed_forward_block)
         return x
 
 class Decoder(nn.Module):
-    def __init__(self,features,layers:nn.ModuleList):
+    def __init__(self,features:int,layers:nn.ModuleList):
         super().__init__()
         self.layers = layers
         self.norm = LayerNormalization(features)
@@ -214,16 +214,19 @@ class Transformer(nn.Module):
         self.projection_layer = projection_layer
 
     def encode(self, src, src_mask):
+        # (batch, seq_len, d_model)
         src = self.src_embed(src)
         src = self.src_pos(src)
-        return self.encoder(src , src_mask)
-
-    def decode(self, encoder_output:torch.Tensor, src_mask:torch.Tensor, tgt:torch.Tensor, tgt_mask:torch.Tensor):
+        return self.encoder(src, src_mask)
+    
+    def decode(self, encoder_output: torch.Tensor, src_mask: torch.Tensor, tgt: torch.Tensor, tgt_mask: torch.Tensor):
+        # (batch, seq_len, d_model)
         tgt = self.tgt_embed(tgt)
         tgt = self.tgt_pos(tgt)
-        return self.decoder(tgt, encoder_output , src_mask, tgt_mask)
+        return self.decoder(tgt, encoder_output, src_mask, tgt_mask)
     
     def project(self, x):
+        # (batch, seq_len, vocab_size)
         return self.projection_layer(x)
     
 def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int, tgt_seq_len: int, d_model: int=512, N: int=6, h: int=8, dropout: float=0.1, d_ff: int=2048) -> Transformer:
