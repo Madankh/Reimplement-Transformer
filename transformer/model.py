@@ -155,7 +155,6 @@ class EncoderBlock(nn.Module):
         return x
     
 class Encoder(nn.Module):
-
     def __init__(self, features: int, layers: nn.ModuleList) -> None:
         super().__init__()
         self.layers = layers
@@ -166,7 +165,6 @@ class Encoder(nn.Module):
             x = layer(x, mask)
         return self.norm(x)
         
-    
 class DecoderBlock(nn.Module):
     def __init__(self,features:int,self_attention_block:MultiheadAttentionBlock, cross_attention_block:MultiheadAttentionBlock, feed_forward_block:FeedForwardblock, dropout:float):
         super().__init__()

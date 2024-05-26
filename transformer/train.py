@@ -16,6 +16,33 @@ from tokenizers.pre_tokenizers import Whitespace
 from config import get_config, get_weights_file_path
 from model import build_transformer
 
+def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
+    sos_idx = tokenizer_tgt.token_to_id('[SOS]')
+    eos_idx = tokenizer_tgt.token_to_id('[EOS]')
+
+    # Precompute the encoder output and reuse  it for every token we get from the decoder
+    encoder_output = model.encode(source, source_mask)
+
+def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_state, num_examples = 2):
+    model.eval()
+
+    count = 0
+    source_texts = []
+    expected = []
+    predicted = []
+
+    console_width = 80
+
+    with torch.no_grad():
+        for batch in validation_ds:
+            count += 1
+            encoder_input = batch['encoder_input'].to(device)
+            encoder_mask = batch['encoder_mask'].to(device)
+
+            assert encoder_input.size(0) == 1, "Batch size must be 1 for validation"
+
+
+
 def get_all_sentences(ds, lang):
     for item in ds:
         yield item["translation"][lang]
