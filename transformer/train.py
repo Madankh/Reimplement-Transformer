@@ -23,11 +23,11 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
     # Precompute the encoder output and reuse  it for every token we get from the decoder
     encoder_output = model.encode(source, source_mask)
      # Initialize the decoder input with the sos tokens
-    decoder_input = torch.empty(1,1).fill_(sos_idx).type_as(sos_idx).type_as(source).to(device)
+    decoder_input = torch.empty(1,1).fill_(sos_idx).type_as(source).to(device)
     while True:
         if decoder_input.size(1) == max_len:
             break
-        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask)
+        decoder_mask = causal_mask(decoder_input.size(1)).type_as(source_mask).to(device)
 
         out = model.decoder(encoder_output , source_mask , decoder_input, decoder_mask)
         pro = model.projection(out[:,-1])
