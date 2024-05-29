@@ -71,6 +71,7 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
             print_msg(f'predicted : {model_out_text}')
 
             if count == num_examples:
+                print_msg('-'*console_width)
                 break
     
 
