@@ -13,7 +13,7 @@ class InputEmbedding(nn.Module):
         return self.embedding(x)*math.sqrt(self.d_model)
 
 class Layernormalization(nn.Module):
-    def __init__(self, d_model:int , eps: float = 10**-6):
+    def __init__(self, eps: float = 10**-6):
         super().__init__()
         self.alpha = nn.Parameter(torch.ones(1))
         self.beta = nn.Parameter(torch.zeros(1))
@@ -33,3 +33,26 @@ class FeedForward(nn.Module):
     
     def forward(self, x):
         return self.linear2(self.dropout(torch.relu(self.linear1(x))))
+    
+class ResidualConnection(nn.Module):
+    def __init__(self, feature:int , dropout:float):
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.norm = Layernormalization(feature)
+
+    def forward(self, x, sublayers):
+        return x + self.dropout(sublayers(self.norm(x)))
+        
+class MultiheadAttentionBlock(nn.Module):
+    def __init__(self,d_model:int, h:int, dropout:float):
+        super().__init__()
+        self.d_model = d_model
+        self.h = h
+        assert d_model % h == 0 , "d_model is not divide by h"
+
+        self.d_k = d_model/h
+        self.w_q = nn.Linear(d_model, d_model, bias=False)
+        self.w_k = nn.Linear(d_model, d_model, bias=False)
+        self.w_v = nn.Linear(d_model, d_model, bias=False)
+        self.w_o = nn.Linear(d_model, d_model, bias=False)
+        
